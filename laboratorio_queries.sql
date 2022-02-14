@@ -121,26 +121,87 @@ ON P.PlaylistId = PR.PlaylistId
 
 SELECT DISTINCT P.Name
 FROM Playlist P
-INNER JOIN (
-    SELECT *
-    FROM PlaylistTrack PL
-    ) AS PLP
-ON PLP.PlaylistId = P.PlaylistId
-INNER JOIN (
-    SELECT T.TrackId
-    FROM Track T
-    INNER JOIN (
-        SELECT AL.AlbumId
-        FROM Album AL
+INNER JOIN(
+    SELECT DISTINCT PLT.PlaylistId
+    FROM PlaylistTrack PLT
+    INNER JOIN (  
+        SELECT T.TrackId
+        FROM Track T
         INNER JOIN (
-            SELECT A.ArtistId
-            FROM Artist A
-            WHERE A.Name = 'AC/DC'
-        ) AS AI
-        ON AI.ArtistId = AL.ArtistId
-    ) as AAI
-    ON AAI.AlbumId = T.AlbumId
-)AS AAIT
-ON AAIT.TrackId = P.PlaylistId
+            SELECT AL.AlbumId
+            FROM Album AL
+            INNER JOIN (
+                SELECT A.ArtistId
+                FROM Artist A
+                WHERE A.Name = 'AC/DC'
+            )AS AI
+            ON AI.ArtistId = AL.ArtistId
+        ) AS AAI
+        ON AAI.AlbumId = T.AlbumId
+    )AS TAAI
+    ON PLT.TrackId = TAAI.TrackId
+)AS  PLTTAAI
+ON P.PlaylistId = PLTTAAI.PlaylistId
 
 
+/*******************************************************************************
+  Listar las playlist que tienen alguna canción del artista Queen, junto con la cantidad que tienen
+********************************************************************************/
+
+SELECT DISTINCT P.Name,Cantidad
+FROM Playlist P
+INNER JOIN(
+    SELECT PLT.PlaylistId, COUNT(*) as Cantidad
+    FROM PlaylistTrack PLT
+    INNER JOIN (
+        SELECT T.TrackId
+        FROM Track T
+        INNER JOIN (
+            SELECT AL.AlbumId
+            FROM Album AL
+            INNER JOIN (
+                SELECT A.ArtistId
+                FROM Artist A
+                WHERE A.Name = 'Queen'
+            )AS AI
+            ON AI.ArtistId = AL.ArtistId
+        ) AS AAI
+        ON AAI.AlbumId = T.AlbumId
+    )AS TAAI
+    ON PLT.TrackId = TAAI.TrackId
+    GROUP BY PLT.PlaylistId
+)AS  PLTTAAI
+ON P.PlaylistId = PLTTAAI.PlaylistId
+
+/*******************************************************************************
+  Listar las pistas que no están en ninguna playlist
+********************************************************************************/
+
+SELECT T.Name
+    FROM Track T
+    LEFT JOIN PlaylistTrack PL
+    ON T.TrackId = PL.TrackId
+    WHERE PL.TrackId IS NULL
+
+/*******************************************************************************
+  Listar los artistas que no tienen album
+********************************************************************************/
+
+SELECT A.Name
+    FROM Artist A
+    LEFT JOIN Album AL
+    ON A.ArtistId = AL.ArtistId
+    WHERE AL.ArtistId IS NULL
+
+/*******************************************************************************
+  Listar los artistas con el número de albums que tienen
+********************************************************************************/
+
+SELECT DISTINCT A.Name,Cantidad
+FROM Artist A
+INNER JOIN(
+    SELECT DISTINCT AL.ArtistId, COUNT(*) as Cantidad
+    FROM Album AL
+    GROUP BY Al.ArtistId
+    ) AS AAL
+    ON A.ArtistId = AAL.ArtistId
